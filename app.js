@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 app.use(cookieParser());
 
 app.use(session({
@@ -14,14 +15,11 @@ app.use(session({
     saveUninitialized: false
 }));
 
-// middleware
 const logger = require('./middleware/logger');
 app.use(logger);
 
-// view engine
 app.set('view engine', 'ejs');
 
-// routes
 app.use('/', require('./routes/auth'));
 app.use('/gym', require('./routes/gym'));
 

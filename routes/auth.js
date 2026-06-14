@@ -2,44 +2,51 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/users');
 
-// register
 router.get('/register', (req, res) => {
-    res.render('register');
+    res.render('register', { error: null });
 });
 
-router.post('/register', (req, res) => {
-    db.add(req.body);
-    req.session.user = req.body;
-    req.session.views = 0;
-
-    res.cookie('theme', 'dark'); // cookie propriu
-
-    res.redirect('/gym');
-});
-
-// login
-router.get('/login', (req, res) => {
-    res.render('login');
-});
-
-router.post('/login', (req, res) => {
-    const user = db.find(req.body.email, req.body.password);
-
-    if (user) {
-        req.session.user = user;
+router.post('/register', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.render('register', { error: "Toate campurile sunt obligatorii" });
+        }
+        const user = await db.add({ email, password });
+        req.session.user = { id: user.id, email: user.email };
         req.session.views = 0;
-
-        res.cookie('theme', 'dark'); // cookie propriu
-        return res.redirect('/gym');
+        res.cookie('theme', 'dark');
+        res.redirect('/gym');
+    } catch (error) {
+        res.render('register', { error: error.message });
     }
-
-    res.send("Login failed");
 });
 
-// logout
+router.get('/login', (req, res) => {
+    res.render('login', { error: null });
+});
+
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await db.findAndVerify(email, password);
+        if (user) {
+            req.session.user = { id: user.id, email: user.email };
+            req.session.views = 0;
+            res.cookie('theme', 'dark');
+            return res.redirect('/gym');
+        }
+        res.render('login', { error: "Email sau parola incorecta" });
+    } catch (error) {
+        res.render('login', { error: "A aparut o eroare. Incearca din nou" });
+    }
+});
+
 router.get('/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/');
+    req.session.destroy(() => {
+        res.clearCookie('connect.sid');
+        res.redirect('/');
+    });
 });
 
 module.exports = router;
